@@ -1,0 +1,47 @@
+<?php
+
+define('ROOT', __DIR__ . '/Audio/');
+define('PLAYLISTS', __DIR__ . '/Playlists/');
+define('ROOT_EXCLUDED_DIRS', ['() Streamripper']);
+
+// configuration end
+
+function create_playlist($dir) {
+	$Directory = new RecursiveDirectoryIterator(ROOT . $dir);
+	$Iterator = new RecursiveIteratorIterator($Directory);
+	$listX = new RegexIterator($Iterator, '~^.+\.(?:mp3|flac|m4a|aac|ogg|wma|ape|mp2|wav)$~i', RecursiveRegexIterator::GET_MATCH);
+
+	$list = [];
+	foreach ($listX as $path) {
+		$path = $path[0];
+		$path = preg_replace('~(\\\|/)+~', '/', $path);
+		$path = 'TF1' . substr($path, 1);
+		$list[] = $path;
+	}
+	file_put_contents(PLAYLISTS . $dir . '.m3u', implode("\n", $list));
+	echo $dir . ' - '. count($list).' files'."\n";
+}
+
+if (!is_dir(ROOT))
+	exit("Wrong directory structure. Path doesn't exist: " . ROOT);
+
+if (!is_dir(PLAYLISTS))
+	mkdir(PLAYLISTS, 0777, true);
+
+foreach (scandir(PLAYLISTS) as $f) {
+	if (!preg_match('~\.m3u$~', $f))
+		continue;
+	if (!is_file(PLAYLISTS . $f))
+		continue;
+	unlink(PLAYLISTS . $f);
+}
+
+foreach (scandir(ROOT) as $dir) {
+	if (in_array($dir, ['.', '..']))
+		continue;
+	if (in_array($dir, ROOT_EXCLUDED_DIRS))
+		continue;
+	if (!is_dir(ROOT . $dir))
+		continue;
+	create_playlist($dir);
+}
